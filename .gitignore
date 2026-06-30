@@ -1,0 +1,9 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local scenario exports (don't commit personal numbers by default)
+rent-vs-buy-settings.json

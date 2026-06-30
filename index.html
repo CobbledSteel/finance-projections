@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rent vs. Buy — Net Worth Projection</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a212b; --panel2:#222c38; --line:#2c3947;
+    --text:#e6edf3; --muted:#8b9aab; --accent:#4f9cff; --buy:#4f9cff; --rent:#ffb454;
+    --equity:#39d98a; --invest:#b07cff; --good:#39d98a; --bad:#ff6b6b;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent)}
+  header{
+    padding:24px 28px 18px; border-bottom:1px solid var(--line);
+  }
+  header h1{margin:0 0 4px; font-size:22px; font-weight:650; letter-spacing:-.2px}
+  header p{margin:0; color:var(--muted); font-size:14px; max-width:760px}
+  .layout{display:flex; align-items:flex-start; gap:0}
+  @media(max-width:980px){ .layout{flex-direction:column} }
+
+  /* Sidebar controls */
+  aside{
+    width:340px; min-width:340px; padding:18px 20px 60px;
+    border-right:1px solid var(--line); height:calc(100vh - 96px);
+    overflow-y:auto; position:sticky; top:0;
+  }
+  @media(max-width:980px){
+    aside{width:100%; min-width:0; height:auto; position:static; border-right:none; border-bottom:1px solid var(--line)}
+  }
+  .grp{margin-bottom:18px}
+  .grp > .grp-h{
+    display:flex; justify-content:space-between; align-items:center;
+    cursor:pointer; user-select:none; padding:8px 10px; border-radius:8px;
+    background:var(--panel); font-weight:600; font-size:13px; letter-spacing:.3px; text-transform:uppercase; color:var(--muted);
+  }
+  .grp > .grp-h:hover{background:var(--panel2)}
+  .grp-h .chev{transition:transform .15s}
+  .grp.collapsed .grp-h .chev{transform:rotate(-90deg)}
+  .grp.collapsed .grp-body{display:none}
+  .grp-body{padding:10px 4px 2px}
+
+  .ctrl{margin-bottom:14px}
+  .ctrl label{display:flex; justify-content:space-between; align-items:baseline; font-size:13px; margin-bottom:5px; color:var(--text)}
+  .ctrl label .v{font-variant-numeric:tabular-nums; font-weight:600; color:var(--accent); font-size:13px}
+  .ctrl .row{display:flex; align-items:center; gap:10px}
+  .ctrl input[type=range]{
+    flex:1; -webkit-appearance:none; appearance:none; height:4px; border-radius:4px;
+    background:var(--line); outline:none; margin:0;
+  }
+  .ctrl input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none; width:15px; height:15px; border-radius:50%;
+    background:var(--accent); cursor:pointer; border:2px solid var(--panel);
+  }
+  .ctrl input[type=range]::-moz-range-thumb{
+    width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--panel)
+  }
+  .ctrl input[type=number]{
+    width:92px; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    border-radius:7px; padding:6px 8px; font:13px inherit; text-align:right; font-variant-numeric:tabular-nums;
+  }
+  .ctrl input[type=number]:focus{border-color:var(--accent); outline:none}
+  .toggles{display:flex; flex-direction:column; gap:10px}
+  .toggle{display:flex; align-items:center; gap:9px; font-size:13px; cursor:pointer}
+  .toggle input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+  .toggle .hint{color:var(--muted); font-size:11.5px}
+  .btnrow{display:flex; gap:8px; margin-top:14px}
+  button.act{
+    flex:1; background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:8px; padding:9px; font:13px inherit; cursor:pointer; font-weight:550;
+  }
+  button.act:hover{border-color:var(--accent); color:var(--accent)}
+  button.act.sm{width:100%; margin-top:8px; padding:7px 8px; font-size:11.5px; font-weight:550}
+  .btnmsg{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.4}
+  .btnmsg.pos{color:var(--good)} .btnmsg.neg{color:#ffb3b3}
+
+  /* Main */
+  main{flex:1; padding:20px 26px 60px; min-width:0; width:100%}
+  .warn{background:rgba(255,107,107,.12); border:1px solid rgba(255,107,107,.4); color:#ffb3b3;
+    padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:13.5px; display:none}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:22px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px}
+  .card .k{font-size:12px; color:var(--muted); margin-bottom:6px; display:flex; align-items:center; gap:6px}
+  .card .k .dot{width:9px;height:9px;border-radius:50%}
+  .card .val{font-size:24px; font-weight:680; letter-spacing:-.3px; font-variant-numeric:tabular-nums}
+  .card .sub{font-size:12px; color:var(--muted); margin-top:3px}
+  .card.hl{border-color:var(--accent)}
+
+  .chartwrap{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px 8px; margin-bottom:20px; position:relative}
+  .chartwrap h3{margin:0 0 2px; font-size:15px; font-weight:600}
+  .chartwrap .csub{margin:0 0 10px; font-size:12.5px; color:var(--muted)}
+  .legend{display:flex; flex-wrap:wrap; gap:16px; margin:4px 0 10px}
+  .legend .item{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--text)}
+  .legend .swatch{width:14px; height:4px; border-radius:2px}
+  canvas{display:block; width:100%; touch-action:none}
+  .tooltip{
+    position:absolute; pointer-events:none; background:var(--panel2); border:1px solid var(--line);
+    border-radius:8px; padding:9px 11px; font-size:12.5px; min-width:150px; opacity:0; transition:opacity .08s;
+    box-shadow:0 6px 24px rgba(0,0,0,.4); z-index:5;
+  }
+  .tooltip .ty{font-weight:650; margin-bottom:6px; font-size:13px}
+  .tooltip .tr{display:flex; justify-content:space-between; gap:14px; margin:2px 0}
+  .tooltip .tr .lab{display:flex;align-items:center;gap:6px; color:var(--muted)}
+  .tooltip .tr .lab .sw{width:9px;height:9px;border-radius:50%}
+  .tooltip .tr .num{font-variant-numeric:tabular-nums; font-weight:600}
+  .dualchart{display:flex; gap:20px}
+  .dualchart .subchart{flex:1; min-width:0; position:relative}
+  .dualchart .subchart h4{margin:0 0 4px; font-size:13px; font-weight:600; color:var(--text); text-align:center}
+  .dualchart .subchart .sublab{margin:0 0 6px; font-size:11.5px; color:var(--muted); text-align:center}
+  @media(max-width:760px){ .dualchart{flex-direction:column; gap:26px} }
+
+  details.tbl{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:0; margin-bottom:20px; overflow:hidden}
+  details.tbl summary{padding:14px 16px; cursor:pointer; font-weight:600; font-size:14.5px; user-select:none}
+  details.tbl summary:hover{color:var(--accent)}
+  .tblscroll{overflow-x:auto; max-height:420px; overflow-y:auto}
+  table{border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums}
+  th,td{padding:7px 12px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--line)}
+  th{position:sticky; top:0; background:var(--panel2); color:var(--muted); font-weight:600; text-align:right; z-index:1}
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:hover{background:var(--panel2)}
+
+  details.notes{color:var(--muted); font-size:13px; max-width:820px}
+  details.notes summary{cursor:pointer; color:var(--text); font-weight:600; margin-bottom:8px}
+  details.notes ul{margin:6px 0 0 0; padding-left:18px}
+  details.notes li{margin:5px 0}
+  .pos{color:var(--good)} .neg{color:var(--bad)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 Rent vs. Buy — Net Worth Projection</h1>
+  <p>Compare buying a home against renting and investing the difference in the market. Adjust the assumptions on the left and watch projected net worth evolve. Everything stays in one file — save it, tweak it, and send it to a friend.</p>
+</header>
+
+<div class="layout">
+  <aside id="controls"></aside>
+
+  <main>
+    <div class="warn" id="warn"></div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="chartwrap">
+      <h3>Projected net worth over time</h3>
+      <p class="csub">Total net worth in each scenario, including investments and (for buying) home equity.</p>
+      <div class="legend">
+        <div class="item"><span class="swatch" style="background:var(--buy)"></span>Buy a home</div>
+        <div class="item"><span class="swatch" style="background:var(--rent)"></span>Rent &amp; invest the difference</div>
+      </div>
+      <canvas id="chartMain" height="380"></canvas>
+      <div class="tooltip" id="tipMain"></div>
+    </div>
+
+    <div class="chartwrap">
+      <h3>What makes up your net worth</h3>
+      <p class="csub">Composition of net worth over time — home equity vs. investments. Both panels share the same scale, so the stack heights (total net worth) are directly comparable.</p>
+      <div class="legend">
+        <div class="item"><span class="swatch" style="background:var(--equity)"></span>Home equity</div>
+        <div class="item"><span class="swatch" style="background:var(--buy)"></span>Investments</div>
+      </div>
+      <div class="dualchart">
+        <div class="subchart">
+          <h4>Buyer</h4>
+          <p class="sublab">Home equity + investments</p>
+          <canvas id="chartBuyStack" height="300"></canvas>
+          <div class="tooltip" id="tipBuy"></div>
+        </div>
+        <div class="subchart">
+          <h4>Renter</h4>
+          <p class="sublab">Investments only</p>
+          <canvas id="chartRentStack" height="300"></canvas>
+          <div class="tooltip" id="tipRent"></div>
+        </div>
+      </div>
+    </div>
+
+    <details class="tbl">
+      <summary>Year-by-year detail</summary>
+      <div class="tblscroll"><table id="dataTable"></table></div>
+    </details>
+
+    <details class="notes">
+      <summary>How this works &amp; assumptions</summary>
+      <ul>
+        <li><b>Fair comparison:</b> both scenarios deploy the <i>same total cash</i> each month. The down payment + closing costs that the buyer spends are instead kept invested by the renter. Whichever scenario has the lower monthly housing cost invests the difference.</li>
+        <li><b>Income &amp; investing:</b> a fixed % of (growing) income is invested every month in <i>both</i> scenarios, so the chart reflects total net worth including ordinary savings — not just the housing decision.</li>
+        <li><b>Buying costs:</b> mortgage principal &amp; interest, property tax, home insurance, HOA, and maintenance. Principal payments build equity (tracked separately). Home value grows at the appreciation rate.</li>
+        <li><b>Equity:</b> home value − remaining loan balance. With "subtract selling costs" on, net worth reflects what you'd actually walk away with if you sold (realtor fees, etc.).</li>
+        <li><b>Renting costs:</b> rent (grows yearly) + renter's insurance.</li>
+        <li><b>Wait before buying:</b> during the wait the buyer rents the same place and keeps saving/investing, while the home keeps appreciating — so waiting longer means a higher purchase price and a larger down payment. The <i>Auto-set</i> button finds the earliest month your savings cover that (rising) down payment + closing costs.</li>
+        <li><b>Returns:</b> investment and appreciation rates compound monthly; rent and income step up once per year.</li>
+        <li><b>Not modeled:</b> income taxes, mortgage-interest / property-tax deductions, capital-gains tax, PMI for low down payments, and rent control. Returns are nominal &amp; pre-tax unless you adjust for inflation. Treat this as a planning estimate, not financial advice.</li>
+      </ul>
+    </details>
+  </main>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- Parameter schema ---------------- */
+const PARAMS = [
+  {group:'Income & Investing', open:true, items:[
+    {id:'income',       label:'Annual income',            min:0, max:600000,  step:1000, val:130000, prefix:'$'},
+    {id:'incomeGrowth', label:'Income growth / yr',       min:0, max:10,      step:0.1,  val:3,      suffix:'%'},
+    {id:'investPct',    label:'% of income invested',     min:0, max:90,      step:1,    val:15,     suffix:'%'},
+    {id:'startSavings', label:'Starting savings',         min:0, max:2000000, step:5000, val:150000, prefix:'$'},
+    {id:'invReturn',    label:'Investment return (S&P 500)',min:0,max:15,     step:0.1,  val:7,      suffix:'%'},
+  ]},
+  {group:'Buying a Home', open:true, items:[
+    {id:'homePrice',    label:'Home price (today)',        min:100000, max:3000000, step:10000, val:650000, prefix:'$'},
+    {id:'waitMonths',   label:'Wait before buying',        min:0, max:180, step:1, val:0,
+       fmt:m=> m+' mo'+(m>=12?' · '+(m/12).toFixed(1)+' yr':''),
+       button:{id:'autoWait', label:'⚙︎ Auto-set: when I can afford the down payment', fn:'autoSetWait'}},
+    {id:'downPct',      label:'Down payment',             min:0,  max:100, step:1,    val:20,  suffix:'%'},
+    {id:'mortRate',     label:'Mortgage rate',            min:0,  max:12,  step:0.05, val:6.5, suffix:'%'},
+    {id:'loanTerm',     label:'Loan term',                min:5,  max:40,  step:1,    val:30,  suffix:' yr'},
+    {id:'propTax',      label:'Property tax / yr',        min:0,  max:4,   step:0.05, val:1.1, suffix:'%'},
+    {id:'hoa',          label:'HOA',                      min:0,  max:2000,step:25,   val:250, prefix:'$', suffix:'/mo'},
+    {id:'homeInsurance',label:'Home insurance / yr',      min:0,  max:2,   step:0.05, val:0.5, suffix:'%'},
+    {id:'maintenance',  label:'Maintenance / yr',         min:0,  max:3,   step:0.1,  val:1,   suffix:'%'},
+    {id:'closingCost',  label:'Closing costs',            min:0,  max:6,   step:0.1,  val:3,   suffix:'%'},
+    {id:'appreciation', label:'Home appreciation / yr',   min:0,  max:10,  step:0.1,  val:4,   suffix:'%'},
+    {id:'sellingCost',  label:'Selling costs (at sale)',  min:0,  max:10,  step:0.5,  val:6,   suffix:'%'},
+  ]},
+  {group:'Renting', open:true, items:[
+    {id:'rent',          label:'Monthly rent',            min:0, max:12000, step:50, val:2800, prefix:'$', suffix:'/mo'},
+    {id:'rentIncrease',  label:'Rent increase / yr',      min:0, max:10,    step:0.1,val:3.5,  suffix:'%'},
+    {id:'renterInsurance',label:'Renter insurance',       min:0, max:100,   step:5,  val:15,   prefix:'$', suffix:'/mo'},
+  ]},
+  {group:'Projection', open:true, items:[
+    {id:'years',     label:'Years to project',  min:1, max:40, step:1,   val:30, suffix:' yr'},
+    {id:'inflation', label:'Inflation rate',    min:0, max:8,  step:0.1, val:3,  suffix:'%'},
+  ]},
+];
+const TOGGLES = [
+  {id:'netOfSelling', label:'Subtract selling costs from home value', hint:'Show net worth as if you sold today', val:true},
+  {id:'realDollars',  label:"Show in today's dollars", hint:'Adjust all values for inflation', val:false},
+];
+
+const state = {};
+PARAMS.forEach(g=>g.items.forEach(it=>state[it.id]=it.val));
+TOGGLES.forEach(t=>state[t.id]=t.val);
+
+/* ---------------- Persistence ---------------- */
+const STORAGE_KEY='rentvsbuy.v1';
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+    Object.keys(s).forEach(k=>{ if(k in state) state[k]=s[k]; });
+  }catch(e){}
+}
+function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ---------------- Formatting ---------------- */
+function fmtUSD(n){
+  const neg=n<0; n=Math.abs(Math.round(n));
+  return (neg?'-$':'$')+n.toLocaleString('en-US');
+}
+function fmtAbbrev(n){
+  const neg=n<0; const a=Math.abs(n); let s;
+  if(a>=1e6) s='$'+(a/1e6).toFixed(a>=1e7?0:1)+'M';
+  else if(a>=1e3) s='$'+(a/1e3).toFixed(a>=1e5?0:0)+'k';
+  else s='$'+Math.round(a);
+  return (neg?'-':'')+s;
+}
+
+/* ---------------- Simulation (pure) ---------------- */
+function simulate(c){
+  const years = Math.max(1, Math.round(c.years));
+  const months = years*12;
+
+  const mReturn = Math.pow(1+c.invReturn/100, 1/12)-1;
+  const mAppr   = Math.pow(1+c.appreciation/100, 1/12)-1;
+  const mortR   = (c.mortRate/100)/12;                 // mortgage uses simple monthly rate
+  const investFrac = c.investPct/100;
+  const n = Math.round(c.loanTerm*12);
+  const waitM = Math.max(0, Math.round(c.waitMonths||0));
+
+  // The home keeps appreciating while you wait, so the purchase price (and the
+  // down payment + closing costs scaled off it) reflect the price on the buy date.
+  const purchasePrice = c.homePrice * Math.pow(1+mAppr, waitM);
+  const downPayment   = purchasePrice * c.downPct/100;
+  const closingCosts  = purchasePrice * c.closingCost/100;
+  const loan0         = purchasePrice - downPayment;
+  let mortgagePmt;
+  if(loan0<=0) mortgagePmt=0;
+  else if(mortR===0) mortgagePmt = loan0/n;
+  else mortgagePmt = loan0 * mortR*Math.pow(1+mortR,n) / (Math.pow(1+mortR,n)-1);
+
+  // State: before the purchase the "buyer" rents and invests just like the renter.
+  let owns=false, homeValue=0, loanBalance=0;
+  let buyInvest  = c.startSavings;
+  let rentInvest = c.startSavings;
+  let initBuyShortfall = 0;
+
+  function doPurchase(){
+    homeValue   = purchasePrice;
+    loanBalance = loan0;
+    if(buyInvest < downPayment+closingCosts) initBuyShortfall = (downPayment+closingCosts) - buyInvest;
+    buyInvest  -= (downPayment + closingCosts);
+    owns = true;
+  }
+  function equityNow(){
+    if(!owns) return 0;
+    const v = c.netOfSelling ? homeValue*(1-c.sellingCost/100) : homeValue;
+    return v - loanBalance;
+  }
+  if(waitM===0) doPurchase();   // buy immediately
+
+  // totals for summary
+  let totInterest=0, totBuyHousing=0, totRent=0, totMaint=0, totTax=0, totIncomeInvested=0;
+
+  const rows=[];
+  // year 0 snapshot
+  rows.push({
+    year:0, homeValue, loanBalance, buyEquity:equityNow(),
+    buyInvest, rentInvest,
+    buyNW: buyInvest+equityNow(), rentNW: rentInvest
+  });
+
+  for(let m=1;m<=months;m++){
+    if(!owns && m===waitM+1) doPurchase();   // buy at the start of the month after the wait
+
+    const y = Math.floor((m-1)/12);
+    const monthlyIncome = (c.income*Math.pow(1+c.incomeGrowth/100,y))/12;
+    const incomeInvest  = monthlyIncome*investFrac;
+    totIncomeInvested += incomeInvest;
+
+    const monthlyRent = (c.rent*Math.pow(1+c.rentIncrease/100,y)) + c.renterInsurance;
+
+    // buyer monthly housing outflow: rent while saving up, ownership costs once bought
+    let buyHousing;
+    if(owns){
+      const piPmt = loanBalance>0 ? mortgagePmt : 0;
+      const tax   = homeValue*(c.propTax/100)/12;
+      const ins   = homeValue*(c.homeInsurance/100)/12;
+      const maint = homeValue*(c.maintenance/100)/12;
+      buyHousing  = piPmt + tax + ins + c.hoa + maint;
+      totTax += tax; totMaint += maint;
+    } else {
+      buyHousing = monthlyRent;   // renting an equivalent place while saving
+    }
+    totBuyHousing += buyHousing; totRent += monthlyRent;
+
+    // cash-flow parity: whoever spends less on housing invests the difference
+    const diff = buyHousing - monthlyRent;
+    const buyExtra  = diff<0 ? -diff : 0;
+    const rentExtra = diff>0 ?  diff : 0;
+
+    // grow investments, then add this month's contributions
+    buyInvest  = buyInvest *(1+mReturn) + incomeInvest + buyExtra;
+    rentInvest = rentInvest*(1+mReturn) + incomeInvest + rentExtra;
+
+    // amortize mortgage
+    if(owns && loanBalance>0){
+      const interest = loanBalance*mortR;
+      let principal = mortgagePmt - interest;
+      if(principal>loanBalance) principal=loanBalance;
+      loanBalance -= principal;
+      totInterest += interest;
+    }
+    // appreciate home (only once owned; pre-purchase appreciation is baked into purchasePrice)
+    if(owns) homeValue *= (1+mAppr);
+
+    if(m%12===0){
+      rows.push({
+        year:m/12, homeValue, loanBalance, buyEquity:equityNow(),
+        buyInvest, rentInvest,
+        buyNW: buyInvest+equityNow(), rentNW: rentInvest
+      });
+    }
+  }
+
+  // inflation adjust for display
+  if(c.realDollars){
+    rows.forEach(r=>{
+      const f=1/Math.pow(1+c.inflation/100, r.year);
+      ['homeValue','loanBalance','buyEquity','buyInvest','rentInvest','buyNW','rentNW'].forEach(k=>r[k]*=f);
+    });
+  }
+
+  // crossover: first year buy>=rent (or never)
+  let crossover=null;
+  const finalSign = Math.sign(rows[rows.length-1].buyNW - rows[rows.length-1].rentNW);
+  for(let i=1;i<rows.length;i++){
+    const a=rows[i-1].buyNW-rows[i-1].rentNW, b=rows[i].buyNW-rows[i].rentNW;
+    if(Math.sign(a)!==Math.sign(b) && b!==0){ crossover=rows[i].year; break; }
+  }
+
+  return {
+    rows, years, waitM, bought:owns,
+    purchasePrice, downPayment, closingCosts, mortgagePmt,
+    initBuyShortfall, crossover, finalSign,
+    totals:{ totInterest, totBuyHousing, totRent, totMaint, totTax, totIncomeInvested }
+  };
+}
+
+/* Find the earliest month at which accumulated savings cover the (rising) down
+   payment + closing costs. Mirrors the pre-purchase trajectory in simulate(). */
+function findAffordableMonth(c){
+  const months = Math.max(1, Math.round(c.years))*12;
+  const mReturn = Math.pow(1+c.invReturn/100, 1/12)-1;
+  const mAppr   = Math.pow(1+c.appreciation/100, 1/12)-1;
+  const investFrac = c.investPct/100;
+  const reqFrac = (c.downPct + c.closingCost)/100;
+  let bal = c.startSavings;
+  for(let m=0;m<=months;m++){
+    const required = c.homePrice*Math.pow(1+mAppr,m)*reqFrac;
+    if(bal >= required) return m;
+    const y = Math.floor(m/12);
+    const monthlyIncome = (c.income*Math.pow(1+c.incomeGrowth/100,y))/12;
+    bal = bal*(1+mReturn) + monthlyIncome*investFrac;
+  }
+  return null; // savings never catch up within the projection window
+}
+
+function autoSetWait(){
+  const m = findAffordableMonth(state);
+  const msg = document.getElementById('btnmsg_waitMonths');
+  if(m==null){
+    if(msg){ msg.className='btnmsg neg';
+      msg.textContent='With these numbers your savings never catch up to the (rising) down payment within '+state.years+' years. Try a higher savings rate/income, a lower price, or a longer projection window.'; }
+    return;
+  }
+  state.waitMonths = m;
+  const r=document.getElementById('r_waitMonths'), n=document.getElementById('n_waitMonths');
+  if(r) r.value = Math.min(m, parseFloat(r.max));
+  if(n) n.value = m;
+  recompute();
+  if(msg){ msg.className='btnmsg pos';
+    msg.textContent = m===0
+      ? 'You can already cover the down payment today — no need to wait.'
+      : 'Set to '+m+' months ('+(m/12).toFixed(1)+' yr): the earliest point your savings cover the down payment + closing costs at that future price.';
+  }
+}
+
+/* ---------------- Chart (canvas line chart w/ hover) ---------------- */
+function Chart(canvas, tipEl){
+  const ctx = canvas.getContext('2d');
+  let geo=null, series=[], yFmt=fmtAbbrev, marker=null;
+
+  function resize(){ render(); }
+  window.addEventListener('resize', resize);
+
+  function render(){
+    const cssW = canvas.clientWidth || canvas.parentElement.clientWidth;
+    const cssH = parseInt(canvas.getAttribute('height'),10);
+    const dpr = window.devicePixelRatio||1;
+    canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+    canvas.style.height = cssH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cssW,cssH);
+
+    const padL=64, padR=18, padT=12, padB=30;
+    const W=cssW-padL-padR, H=cssH-padT-padB;
+    if(!series.length){return;}
+
+    const xs = series[0].data.map(d=>d.x);
+    const xmin=xs[0], xmax=xs[xs.length-1];
+    let ymin=Infinity, ymax=-Infinity;
+    series.forEach(s=>s.data.forEach(d=>{ if(d.y<ymin)ymin=d.y; if(d.y>ymax)ymax=d.y; }));
+    if(ymin>0) ymin=0;
+    if(ymax===ymin) ymax=ymin+1;
+    // pad top
+    ymax += (ymax-ymin)*0.06;
+
+    const X = x=> padL + (xmax===xmin?0:(x-xmin)/(xmax-xmin))*W;
+    const Y = y=> padT + H - (y-ymin)/(ymax-ymin)*H;
+
+    // gridlines + y labels
+    const ticks=5;
+    ctx.font='11px -apple-system,sans-serif'; ctx.textBaseline='middle';
+    for(let i=0;i<=ticks;i++){
+      const yv = ymin + (ymax-ymin)*i/ticks;
+      const py = Y(yv);
+      ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(padL+W,py); ctx.stroke();
+      ctx.fillStyle='#8b9aab'; ctx.textAlign='right';
+      ctx.fillText(yFmt(yv), padL-8, py);
+    }
+    // x labels
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    const xstep = Math.max(1, Math.round((xmax-xmin)/8));
+    for(let xv=xmin; xv<=xmax; xv+=xstep){
+      ctx.fillStyle='#8b9aab';
+      ctx.fillText('Yr '+xv, X(xv), padT+H+8);
+    }
+
+    // purchase marker (vertical line)
+    if(marker!=null && marker.x>=xmin && marker.x<=xmax){
+      const mx=X(marker.x);
+      ctx.strokeStyle='rgba(230,237,243,.55)'; ctx.lineWidth=1.5;
+      ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(mx,padT); ctx.lineTo(mx,padT+H); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font='600 11px -apple-system,sans-serif';
+      const tw=ctx.measureText(marker.label).width;
+      let bx=mx+6; if(bx+tw+8 > padL+W) bx=mx-tw-14;
+      ctx.fillStyle='rgba(57,217,138,.20)';
+      ctx.fillRect(bx-4, padT+1, tw+9, 16);
+      ctx.fillStyle='#6ee7a8'; ctx.textAlign='left'; ctx.textBaseline='middle';
+      ctx.fillText(marker.label, bx, padT+9);
+    }
+
+    // lines
+    series.forEach(s=>{
+      ctx.strokeStyle=s.color; ctx.lineWidth=2.5; ctx.lineJoin='round';
+      ctx.beginPath();
+      s.data.forEach((d,i)=>{ const px=X(d.x),py=Y(d.y); i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+      ctx.stroke();
+    });
+
+    geo={padL,padR,padT,padB,W,H,xmin,xmax,ymin,ymax,X,Y,cssW,cssH};
+
+    if(hoverIdx!=null) drawHover();
+  }
+
+  let hoverIdx=null;
+  function drawHover(){
+    if(!geo||hoverIdx==null) return;
+    const xv = series[0].data[hoverIdx].x;
+    const px = geo.X(xv);
+    ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(px,geo.padT); ctx.lineTo(px,geo.padT+geo.H); ctx.stroke();
+    ctx.setLineDash([]);
+    series.forEach(s=>{
+      const d=s.data[hoverIdx]; const py=geo.Y(d.y);
+      ctx.fillStyle=s.color; ctx.strokeStyle='#1a212b'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(px,py,4.5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    });
+    // tooltip
+    let html='<div class="ty">Year '+xv+'</div>';
+    series.forEach(s=>{
+      html+='<div class="tr"><span class="lab"><span class="sw" style="background:'+s.color+'"></span>'+s.label+'</span><span class="num">'+fmtUSD(s.data[hoverIdx].y)+'</span></div>';
+    });
+    tipEl.innerHTML=html; tipEl.style.opacity=1;
+    const ox=canvas.offsetLeft, oy=canvas.offsetTop;
+    let left=px+14;
+    if(left+170 > geo.cssW) left=px-170;
+    if(left<0) left=0;
+    tipEl.style.left=(ox+left)+'px';
+    tipEl.style.top=(oy+geo.padT+8)+'px';
+  }
+
+  function onMove(e){
+    if(!geo) return;
+    const rect=canvas.getBoundingClientRect();
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+    const xv = geo.xmin + (cx-geo.padL)/geo.W*(geo.xmax-geo.xmin);
+    let idx=Math.round(xv - geo.xmin);
+    idx=Math.max(0, Math.min(series[0].data.length-1, idx));
+    if(idx!==hoverIdx){ hoverIdx=idx; render(); }
+  }
+  function onLeave(){ hoverIdx=null; tipEl.style.opacity=0; render(); }
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseleave', onLeave);
+  canvas.addEventListener('touchstart', onMove);
+  canvas.addEventListener('touchmove', onMove);
+
+  this.setData=function(s){ series=s; render(); };
+  this.setFmt=function(f){ yFmt=f; };
+  this.setMarker=function(x,label){ marker=(x==null||isNaN(x))?null:{x:x,label:label}; };
+}
+
+/* ---------------- Stacked area chart (composition over time) ---------------- */
+function StackChart(canvas, tipEl){
+  const ctx = canvas.getContext('2d');
+  let geo=null, bands=[], yFmt=fmtAbbrev, marker=null, fixedMax=null, hoverIdx=null;
+  window.addEventListener('resize', render);
+
+  function render(){
+    const cssW = canvas.clientWidth || canvas.parentElement.clientWidth;
+    const cssH = parseInt(canvas.getAttribute('height'),10);
+    const dpr = window.devicePixelRatio||1;
+    canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cssW,cssH);
+
+    const padL=56, padR=12, padT=10, padB=28;
+    const W=cssW-padL-padR, H=cssH-padT-padB;
+    if(!bands.length){ return; }
+
+    const xs=bands[0].data.map(d=>d.x), N=xs.length;
+    const xmin=xs[0], xmax=xs[xs.length-1];
+    let ymax;
+    if(fixedMax!=null) ymax=fixedMax;
+    else { ymax=0; for(let i=0;i<N;i++){ let s=0; bands.forEach(b=>s+=Math.max(0,b.data[i].y)); if(s>ymax)ymax=s; } ymax=ymax<=0?1:ymax*1.06; }
+    const ymin=0;
+    const X=x=> padL + (xmax===xmin?0:(x-xmin)/(xmax-xmin))*W;
+    const Y=y=> padT + H - (y-ymin)/(ymax-ymin)*H;
+
+    // gridlines + y labels
+    ctx.font='11px -apple-system,sans-serif'; ctx.textBaseline='middle';
+    const ticks=5;
+    for(let i=0;i<=ticks;i++){
+      const yv=ymin+(ymax-ymin)*i/ticks, py=Y(yv);
+      ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(padL+W,py); ctx.stroke();
+      ctx.fillStyle='#8b9aab'; ctx.textAlign='right'; ctx.fillText(yFmt(yv), padL-8, py);
+    }
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    const xstep=Math.max(1, Math.round((xmax-xmin)/6));
+    for(let xv=xmin; xv<=xmax; xv+=xstep){ ctx.fillStyle='#8b9aab'; ctx.fillText('Yr '+xv, X(xv), padT+H+8); }
+
+    // stacked areas (bottom -> top)
+    const cum=xs.map(()=>0);
+    bands.forEach(b=>{
+      ctx.beginPath();
+      for(let i=0;i<N;i++){ const px=X(xs[i]), py=Y(cum[i]+Math.max(0,b.data[i].y)); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+      for(let i=N-1;i>=0;i--){ const px=X(xs[i]), py=Y(cum[i]); ctx.lineTo(px,py); }
+      ctx.closePath(); ctx.fillStyle=b.fill; ctx.fill();
+      ctx.beginPath();
+      for(let i=0;i<N;i++){ const px=X(xs[i]), py=Y(cum[i]+Math.max(0,b.data[i].y)); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+      ctx.strokeStyle=b.color; ctx.lineWidth=1.5; ctx.stroke();
+      for(let i=0;i<N;i++) cum[i]+=Math.max(0,b.data[i].y);
+    });
+
+    // purchase marker
+    if(marker!=null && marker.x>=xmin && marker.x<=xmax){
+      const mx=X(marker.x);
+      ctx.strokeStyle='rgba(230,237,243,.6)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(mx,padT); ctx.lineTo(mx,padT+H); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font='600 10px -apple-system,sans-serif'; ctx.fillStyle='#6ee7a8';
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      const tw=ctx.measureText('Buy').width; let bx=mx+4; if(bx+tw>padL+W) bx=mx-tw-4;
+      ctx.fillText('Buy', bx, padT+1);
+    }
+
+    geo={padL,padR,padT,padB,W,H,xmin,xmax,ymin,ymax,X,Y,cssW,cssH,N,xs};
+    if(hoverIdx!=null) drawHover();
+  }
+
+  function drawHover(){
+    if(!geo||hoverIdx==null) return;
+    const xv=geo.xs[hoverIdx], px=geo.X(xv);
+    ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(px,geo.padT); ctx.lineTo(px,geo.padT+geo.H); ctx.stroke(); ctx.setLineDash([]);
+    let cum=0, total=0;
+    bands.forEach(b=>{ cum+=Math.max(0,b.data[hoverIdx].y); total+=b.data[hoverIdx].y; const py=geo.Y(cum);
+      ctx.fillStyle=b.color; ctx.strokeStyle='#1a212b'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(px,py,4,0,Math.PI*2); ctx.fill(); ctx.stroke(); });
+    let html='<div class="ty">Year '+xv+'</div>';
+    bands.forEach(b=>{ html+='<div class="tr"><span class="lab"><span class="sw" style="background:'+b.color+'"></span>'+b.label+'</span><span class="num">'+fmtUSD(b.data[hoverIdx].y)+'</span></div>'; });
+    html+='<div class="tr" style="border-top:1px solid var(--line);margin-top:5px;padding-top:5px"><span class="lab">Net worth</span><span class="num">'+fmtUSD(total)+'</span></div>';
+    tipEl.innerHTML=html; tipEl.style.opacity=1;
+    const ox=canvas.offsetLeft, oy=canvas.offsetTop;
+    let left=px+12; if(left+155>geo.cssW) left=px-155; if(left<2) left=2;
+    tipEl.style.left=(ox+left)+'px'; tipEl.style.top=(oy+geo.padT+4)+'px';
+  }
+
+  function onMove(e){
+    if(!geo) return;
+    const rect=canvas.getBoundingClientRect();
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+    const xv=geo.xmin + (cx-geo.padL)/geo.W*(geo.xmax-geo.xmin);
+    let idx=Math.round(xv-geo.xmin);
+    idx=Math.max(0, Math.min(geo.N-1, idx));
+    if(idx!==hoverIdx){ hoverIdx=idx; render(); }
+  }
+  function onLeave(){ hoverIdx=null; tipEl.style.opacity=0; render(); }
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseleave', onLeave);
+  canvas.addEventListener('touchstart', onMove);
+  canvas.addEventListener('touchmove', onMove);
+
+  this.setData=function(b,fixed){ bands=b; fixedMax=(fixed==null?null:fixed); render(); };
+  this.setMarker=function(x,label){ marker=(x==null||isNaN(x))?null:{x:x,label:label}; };
+}
+
+/* ---------------- Build UI ---------------- */
+function buildControls(){
+  const aside=document.getElementById('controls');
+  PARAMS.forEach((g,gi)=>{
+    const grp=document.createElement('div'); grp.className='grp'+(g.open?'':' collapsed');
+    const h=document.createElement('div'); h.className='grp-h';
+    h.innerHTML='<span>'+g.group+'</span><span class="chev">▾</span>';
+    h.onclick=()=>grp.classList.toggle('collapsed');
+    grp.appendChild(h);
+    const body=document.createElement('div'); body.className='grp-body';
+    g.items.forEach(it=>{
+      const c=document.createElement('div'); c.className='ctrl';
+      const lab=document.createElement('label');
+      lab.innerHTML='<span>'+it.label+'</span><span class="v" id="v_'+it.id+'"></span>';
+      const row=document.createElement('div'); row.className='row';
+      const range=document.createElement('input'); range.type='range';
+      range.min=it.min; range.max=it.max; range.step=it.step; range.value=state[it.id]; range.id='r_'+it.id;
+      const num=document.createElement('input'); num.type='number';
+      num.min=it.min; num.max=it.max; num.step=it.step; num.value=state[it.id]; num.id='n_'+it.id;
+      range.addEventListener('input',()=>{ setVal(it,parseFloat(range.value)); num.value=range.value; });
+      num.addEventListener('input',()=>{ const v=parseFloat(num.value); if(!isNaN(v)){ setVal(it,v); if(v>=it.min&&v<=it.max) range.value=v; } });
+      row.appendChild(range); row.appendChild(num);
+      c.appendChild(lab); c.appendChild(row);
+      if(it.button){
+        const b=document.createElement('button'); b.className='act sm'; b.id='btn_'+it.button.id;
+        b.textContent=it.button.label;
+        b.onclick=()=>{ if(it.button.fn==='autoSetWait') autoSetWait(); };
+        const msg=document.createElement('div'); msg.className='btnmsg'; msg.id='btnmsg_'+it.id;
+        c.appendChild(b); c.appendChild(msg);
+      }
+      body.appendChild(c);
+    });
+    grp.appendChild(body); aside.appendChild(grp);
+  });
+
+  // toggles
+  const tg=document.createElement('div'); tg.className='grp';
+  const th=document.createElement('div'); th.className='grp-h'; th.innerHTML='<span>Display &amp; Settings</span><span class="chev">▾</span>';
+  th.onclick=()=>tg.classList.toggle('collapsed');
+  tg.appendChild(th);
+  const tb=document.createElement('div'); tb.className='grp-body';
+  const tlist=document.createElement('div'); tlist.className='toggles';
+  TOGGLES.forEach(t=>{
+    const l=document.createElement('label'); l.className='toggle';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=state[t.id]; cb.id='t_'+t.id;
+    cb.addEventListener('change',()=>{ state[t.id]=cb.checked; recompute(); });
+    const span=document.createElement('span');
+    span.innerHTML=t.label+'<br><span class="hint">'+t.hint+'</span>';
+    l.appendChild(cb); l.appendChild(span); tlist.appendChild(l);
+  });
+  tb.appendChild(tlist);
+
+  const slab=document.createElement('div'); slab.className='btnmsg'; slab.style.marginTop='12px';
+  slab.textContent='Save or load every parameter as a JSON file:';
+  const br=document.createElement('div'); br.className='btnrow';
+  const eb=document.createElement('button'); eb.className='act'; eb.textContent='⬇ Export JSON'; eb.onclick=exportSettings;
+  const ib=document.createElement('button'); ib.className='act'; ib.textContent='⬆ Import JSON';
+  const fileInput=document.createElement('input'); fileInput.type='file'; fileInput.accept='application/json,.json'; fileInput.style.display='none';
+  fileInput.addEventListener('change', e=>{ importSettings(e.target.files[0]); e.target.value=''; });
+  ib.onclick=()=>fileInput.click();
+  br.appendChild(eb); br.appendChild(ib);
+  const sr=document.createElement('div'); sr.className='btnrow';
+  const sb=document.createElement('button'); sb.className='act'; sb.textContent='🔗 Copy shareable link'; sb.onclick=copyShareLink;
+  sr.appendChild(sb);
+  const br2=document.createElement('div'); br2.className='btnrow';
+  const rb=document.createElement('button'); rb.className='act'; rb.textContent='↺ Reset to defaults'; rb.onclick=resetDefaults;
+  br2.appendChild(rb);
+  const smsg=document.createElement('div'); smsg.className='btnmsg'; smsg.id='settingsMsg';
+  tb.appendChild(slab); tb.appendChild(br); tb.appendChild(sr); tb.appendChild(br2); tb.appendChild(fileInput); tb.appendChild(smsg);
+  tg.appendChild(tb); aside.appendChild(tg);
+}
+
+function setVal(it,v){ state[it.id]=v; recompute(); }
+function refreshLabels(){
+  PARAMS.forEach(g=>g.items.forEach(it=>{
+    const el=document.getElementById('v_'+it.id); if(!el)return;
+    let v=state[it.id], txt;
+    if(it.fmt){ el.textContent=it.fmt(v); return; }
+    if(it.prefix==='$') txt=fmtUSD(v); else txt=(''+v);
+    txt=(it.prefix&&it.prefix!=='$'?it.prefix:'')+txt+(it.suffix||'');
+    el.textContent=txt;
+  }));
+}
+function syncInputsFromState(){
+  PARAMS.forEach(g=>g.items.forEach(it=>{
+    const r=document.getElementById('r_'+it.id), n=document.getElementById('n_'+it.id), v=state[it.id];
+    if(n) n.value=v;
+    if(r) r.value=Math.min(Math.max(v, it.min), it.max);
+  }));
+  TOGGLES.forEach(t=>{ const cb=document.getElementById('t_'+t.id); if(cb) cb.checked=!!state[t.id]; });
+}
+function resetDefaults(){
+  PARAMS.forEach(g=>g.items.forEach(it=> state[it.id]=it.val ));
+  TOGGLES.forEach(t=> state[t.id]=t.val );
+  syncInputsFromState(); recompute();
+  settingsMsg('Reset to default assumptions.','');
+}
+function settingsMsg(text,cls){
+  const el=document.getElementById('settingsMsg');
+  if(el){ el.textContent=text; el.className='btnmsg'+(cls?' '+cls:''); }
+}
+/* Download all parameters as a JSON file */
+function exportSettings(){
+  const data={ app:'rent-vs-buy', version:1, exportedAt:new Date().toISOString(), settings:Object.assign({}, state) };
+  const blob=new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='rent-vs-buy-settings.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  settingsMsg('Saved current settings to rent-vs-buy-settings.json','pos');
+}
+/* Apply a plain {key:value} settings object onto state (shared by import + share links) */
+function applySettingsObject(obj){
+  if(!obj || typeof obj!=='object') throw new Error('not a settings object');
+  let applied=0;
+  Object.keys(obj).forEach(k=>{
+    if(!(k in state)) return;
+    const v=obj[k];
+    if(typeof state[k]==='boolean') state[k]=!!v;
+    else { const num=parseFloat(v); if(isNaN(num)) return; state[k]=num; }
+    applied++;
+  });
+  if(applied===0) throw new Error('no recognized settings found');
+  return applied;
+}
+/* Load parameters from a JSON file (accepts the exported wrapper or a bare object) */
+function importSettings(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(reader.result);
+      const incoming = (parsed && typeof parsed.settings==='object') ? parsed.settings : parsed;
+      const applied=applySettingsObject(incoming);
+      syncInputsFromState(); recompute();
+      settingsMsg('Loaded '+applied+' setting'+(applied===1?'':'s')+' from '+(file.name||'file')+'.','pos');
+    }catch(err){
+      settingsMsg('Could not import this file: '+err.message,'neg');
+    }
+  };
+  reader.onerror=()=>settingsMsg('Could not read the file.','neg');
+  reader.readAsText(file);
+}
+
+/* ---- Shareable links: encode the full parameter set into the URL hash ---- */
+function encodeState(s){
+  return btoa(JSON.stringify(s)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodeState(str){
+  let b=str.replace(/-/g,'+').replace(/_/g,'/'); while(b.length%4) b+='=';
+  return JSON.parse(atob(b));
+}
+function makeShareURL(){ return location.href.split('#')[0] + '#s=' + encodeState(state); }
+function applyHashIfPresent(){
+  const m=(location.hash||'').match(/[#&]s=([^&]+)/);
+  if(!m) return false;
+  try{ return applySettingsObject(decodeState(m[1]))>0; }
+  catch(e){ return false; }
+}
+function fallbackCopy(text,done){
+  try{
+    const ta=document.createElement('textarea'); ta.value=text;
+    ta.style.position='fixed'; ta.style.top='-1000px'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok=document.execCommand('copy'); ta.remove(); done(ok);
+  }catch(e){ done(false); }
+}
+function copyShareLink(){
+  const url=makeShareURL();
+  function done(ok){
+    try{ history.replaceState(null,'',url); }catch(e){}
+    settingsMsg(ok ? 'Shareable link copied to clipboard.' : 'Link added to the address bar above — copy it from there.', ok?'pos':'');
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>done(true)).catch(()=>fallbackCopy(url,done));
+  } else fallbackCopy(url,done);
+}
+
+/* ---------------- Render results ---------------- */
+let chartMain, chartBuyStack, chartRentStack;
+function recompute(){
+  refreshLabels();
+  saveState();
+  const sim=simulate(state);
+  const rows=sim.rows, last=rows[rows.length-1];
+
+  // warning
+  const warn=document.getElementById('warn');
+  if(sim.initBuyShortfall>0){
+    warn.style.display='block';
+    warn.innerHTML='⚠️ At the planned purchase ('+(sim.waitM>0?('in '+sim.waitM+' months'):'today')+
+      ') your down payment + closing costs ('+fmtUSD(sim.downPayment+sim.closingCosts)+
+      ') exceed your available savings by '+fmtUSD(sim.initBuyShortfall)+
+      '. The buying scenario assumes that gap is financed (a temporary negative investment balance). Try the “Auto-set” button or wait longer.';
+  } else warn.style.display='none';
+
+  // cards
+  const diff=last.buyNW-last.rentNW;
+  const winner = diff>=0 ? 'Buying' : 'Renting';
+  let crossTxt;
+  if(sim.crossover!=null) crossTxt='Lines cross at year '+sim.crossover;
+  else crossTxt = (sim.finalSign>=0?'Buying leads the whole time':'Renting leads the whole time');
+
+  const cards=[
+    {k:'Net worth — Buy', dot:'var(--buy)', val:fmtUSD(last.buyNW), sub:'after '+sim.years+' years', hl:diff>=0},
+    {k:'Net worth — Rent & invest', dot:'var(--rent)', val:fmtUSD(last.rentNW), sub:'after '+sim.years+' years', hl:diff<0},
+    {k:(diff>=0?'Buying ahead by':'Renting ahead by'), val:fmtUSD(Math.abs(diff)),
+       sub:crossTxt, cls:diff>=0?'pos':'neg'},
+    {k:'Monthly mortgage (P&I)', val: sim.bought? fmtUSD(sim.mortgagePmt) : 'Not bought',
+       sub: 'Down '+fmtUSD(sim.downPayment) + (sim.waitM>0? ' · buy in '+sim.waitM+' mo at '+fmtAbbrev(sim.purchasePrice) : '')},
+    {k:'Total mortgage interest', val:fmtUSD(sim.totals.totInterest), sub:'over the projection'},
+    {k:'Total spent renting', val:fmtUSD(sim.totals.totRent), sub:'vs '+fmtUSD(sim.totals.totBuyHousing)+' owning'},
+  ];
+  document.getElementById('cards').innerHTML = cards.map(c=>(
+    '<div class="card'+(c.hl?' hl':'')+'">'+
+      '<div class="k">'+(c.dot?'<span class="dot" style="background:'+c.dot+'"></span>':'')+c.k+'</div>'+
+      '<div class="val '+(c.cls||'')+'">'+c.val+'</div>'+
+      '<div class="sub">'+c.sub+'</div>'+
+    '</div>'
+  )).join('');
+
+  // charts — vertical marker at the purchase month (only when there's an actual wait)
+  const pYear = (sim.bought && sim.waitM>0) ? sim.waitM/12 : null;
+  const pLabel = pYear!=null ? ('Buy · yr '+(sim.waitM%12===0 ? (sim.waitM/12) : (sim.waitM/12).toFixed(1))) : null;
+  chartMain.setMarker(pYear, pLabel);
+  chartBuyStack.setMarker(pYear, pLabel);
+  chartRentStack.setMarker(pYear, pLabel);
+
+  chartMain.setData([
+    {label:'Buy', color:getCss('--buy'), data:rows.map(r=>({x:r.year,y:r.buyNW}))},
+    {label:'Rent & invest', color:getCss('--rent'), data:rows.map(r=>({x:r.year,y:r.rentNW}))},
+  ]);
+
+  // shared y-scale so the two stacked panels are directly comparable
+  let stackMax=0;
+  rows.forEach(r=>{ stackMax=Math.max(stackMax,
+    Math.max(0,r.buyEquity)+Math.max(0,r.buyInvest), Math.max(0,r.rentInvest)); });
+  stackMax = stackMax<=0 ? 1 : stackMax*1.06;
+
+  chartBuyStack.setData([
+    {label:'Home equity', color:getCss('--equity'), fill:'rgba(57,217,138,.5)', data:rows.map(r=>({x:r.year,y:r.buyEquity}))},
+    {label:'Investments', color:getCss('--buy'),    fill:'rgba(79,156,255,.5)', data:rows.map(r=>({x:r.year,y:r.buyInvest}))},
+  ], stackMax);
+  chartRentStack.setData([
+    {label:'Investments', color:getCss('--buy'),    fill:'rgba(79,156,255,.5)', data:rows.map(r=>({x:r.year,y:r.rentInvest}))},
+  ], stackMax);
+
+  // table
+  const cols=[['year','Year'],['homeValue','Home value'],['loanBalance','Loan balance'],
+    ['buyEquity','Home equity'],['buyInvest','Buyer invest'],['buyNW','Buy net worth'],
+    ['rentInvest','Renter invest'],['rentNW','Rent net worth']];
+  let thead='<thead><tr>'+cols.map(c=>'<th>'+c[1]+'</th>').join('')+'</tr></thead>';
+  let tbody='<tbody>'+rows.map(r=>'<tr>'+cols.map(c=>{
+    if(c[0]==='year') return '<td>'+r.year+'</td>';
+    return '<td>'+fmtUSD(r[c[0]])+'</td>';
+  }).join('')+'</tr>').join('')+'</tbody>';
+  document.getElementById('dataTable').innerHTML=thead+tbody;
+}
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+/* ---------------- Init ---------------- */
+loadState();
+const sharedFromLink = applyHashIfPresent();   // a shared link overrides saved settings
+buildControls();
+chartMain      = new Chart(document.getElementById('chartMain'),  document.getElementById('tipMain'));
+chartBuyStack  = new StackChart(document.getElementById('chartBuyStack'),  document.getElementById('tipBuy'));
+chartRentStack = new StackChart(document.getElementById('chartRentStack'), document.getElementById('tipRent'));
+recompute();
+if(sharedFromLink) settingsMsg('Loaded a shared scenario from the link.','pos');
+</script>
+</body>
+</html>
