@@ -183,6 +183,17 @@
       </div>
     </div>
 
+    <div class="chartwrap">
+      <h3>Monthly spending money</h3>
+      <p class="csub">What's left of your monthly salary after your investment contribution and all housing payments — the discretionary money you can actually spend. While renting/saving the two lines overlap; after buying they split. A dip below zero means the plan costs more than your monthly take-home. <em>(The net-worth charts above assume the rent-vs-buy difference is invested rather than spent.)</em></p>
+      <div class="legend">
+        <div class="item"><span class="swatch" style="background:var(--buy)"></span>If you buy</div>
+        <div class="item"><span class="swatch" style="background:var(--rent)"></span>If you rent</div>
+      </div>
+      <canvas id="chartDisc" height="300"></canvas>
+      <div class="tooltip" id="tipDisc"></div>
+    </div>
+
     <details class="tbl">
       <summary>Year-by-year detail</summary>
       <div class="tblscroll"><table id="dataTable"></table></div>
@@ -273,6 +284,11 @@ function fmtAbbrev(n){
   else s='$'+Math.round(a);
   return (neg?'-':'')+s;
 }
+function fmtMonthly(n){
+  const neg=n<0, a=Math.abs(n);
+  const s = a>=1000 ? '$'+(a/1000).toFixed(1)+'k' : '$'+Math.round(a);
+  return (neg?'-':'')+s;
+}
 
 /* ---------------- Simulation (pure) ---------------- */
 function simulate(c){
@@ -325,7 +341,8 @@ function simulate(c){
   rows.push({
     year:0, homeValue, loanBalance, buyEquity:equityNow(),
     buyInvest, rentInvest,
-    buyNW: buyInvest+equityNow(), rentNW: rentInvest
+    buyNW: buyInvest+equityNow(), rentNW: rentInvest,
+    buyDisc:0, rentDisc:0
   });
 
   for(let m=1;m<=months;m++){
@@ -376,16 +393,20 @@ function simulate(c){
       rows.push({
         year:m/12, homeValue, loanBalance, buyEquity:equityNow(),
         buyInvest, rentInvest,
-        buyNW: buyInvest+equityNow(), rentNW: rentInvest
+        buyNW: buyInvest+equityNow(), rentNW: rentInvest,
+        buyDisc: monthlyIncome - incomeInvest - buyHousing,
+        rentDisc: monthlyIncome - incomeInvest - monthlyRent
       });
     }
   }
 
   // inflation adjust for display
+  if(rows.length>1){ rows[0].buyDisc=rows[1].buyDisc; rows[0].rentDisc=rows[1].rentDisc; }
+
   if(c.realDollars){
     rows.forEach(r=>{
       const f=1/Math.pow(1+c.inflation/100, r.year);
-      ['homeValue','loanBalance','buyEquity','buyInvest','rentInvest','buyNW','rentNW'].forEach(k=>r[k]*=f);
+      ['homeValue','loanBalance','buyEquity','buyInvest','rentInvest','buyNW','rentNW','buyDisc','rentDisc'].forEach(k=>r[k]*=f);
     });
   }
 
@@ -488,6 +509,11 @@ function Chart(canvas, tipEl){
       ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(padL+W,py); ctx.stroke();
       ctx.fillStyle='#8b9aab'; ctx.textAlign='right';
       ctx.fillText(yFmt(yv), padL-8, py);
+    }
+    // emphasized zero baseline (e.g. when values dip negative)
+    if(ymin<0 && ymax>0){
+      const z=Y(0); ctx.strokeStyle='rgba(230,237,243,.28)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(padL,z); ctx.lineTo(padL+W,z); ctx.stroke();
     }
     // x labels
     ctx.textAlign='center'; ctx.textBaseline='top';
@@ -858,7 +884,7 @@ function copyShareLink(){
 }
 
 /* ---------------- Render results ---------------- */
-let chartMain, chartBuyStack, chartRentStack;
+let chartMain, chartBuyStack, chartRentStack, chartDisc;
 function recompute(){
   refreshLabels();
   saveState();
@@ -906,6 +932,7 @@ function recompute(){
   chartMain.setMarker(pYear, pLabel);
   chartBuyStack.setMarker(pYear, pLabel);
   chartRentStack.setMarker(pYear, pLabel);
+  chartDisc.setMarker(pYear, pLabel);
 
   chartMain.setData([
     {label:'Buy', color:getCss('--buy'), data:rows.map(r=>({x:r.year,y:r.buyNW}))},
@@ -925,6 +952,11 @@ function recompute(){
   chartRentStack.setData([
     {label:'Investments', color:getCss('--buy'),    fill:'rgba(79,156,255,.5)', data:rows.map(r=>({x:r.year,y:r.rentInvest}))},
   ], stackMax);
+
+  chartDisc.setData([
+    {label:'If you buy',  color:getCss('--buy'),  data:rows.map(r=>({x:r.year,y:r.buyDisc}))},
+    {label:'If you rent', color:getCss('--rent'), data:rows.map(r=>({x:r.year,y:r.rentDisc}))},
+  ]);
 
   // table
   const cols=[['year','Year'],['homeValue','Home value'],['loanBalance','Loan balance'],
@@ -946,6 +978,8 @@ buildControls();
 chartMain      = new Chart(document.getElementById('chartMain'),  document.getElementById('tipMain'));
 chartBuyStack  = new StackChart(document.getElementById('chartBuyStack'),  document.getElementById('tipBuy'));
 chartRentStack = new StackChart(document.getElementById('chartRentStack'), document.getElementById('tipRent'));
+chartDisc      = new Chart(document.getElementById('chartDisc'), document.getElementById('tipDisc'));
+chartDisc.setFmt(fmtMonthly);
 recompute();
 if(sharedFromLink) settingsMsg('Loaded a shared scenario from the link.','pos');
 </script>
