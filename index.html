@@ -447,6 +447,7 @@ function autoSetWait(){
 /* ---------------- Chart (canvas line chart w/ hover) ---------------- */
 function Chart(canvas, tipEl){
   const ctx = canvas.getContext('2d');
+  const baseH = parseInt(canvas.getAttribute('height'),10) || 380;  // capture before we mutate the attribute
   let geo=null, series=[], yFmt=fmtAbbrev, marker=null;
 
   function resize(){ render(); }
@@ -454,7 +455,7 @@ function Chart(canvas, tipEl){
 
   function render(){
     const cssW = canvas.clientWidth || canvas.parentElement.clientWidth;
-    const cssH = parseInt(canvas.getAttribute('height'),10);
+    const cssH = baseH;
     const dpr = window.devicePixelRatio||1;
     canvas.width = cssW*dpr; canvas.height = cssH*dpr;
     canvas.style.height = cssH+'px';
@@ -576,12 +577,13 @@ function Chart(canvas, tipEl){
 /* ---------------- Stacked area chart (composition over time) ---------------- */
 function StackChart(canvas, tipEl){
   const ctx = canvas.getContext('2d');
+  const baseH = parseInt(canvas.getAttribute('height'),10) || 300;  // capture before we mutate the attribute
   let geo=null, bands=[], yFmt=fmtAbbrev, marker=null, fixedMax=null, hoverIdx=null;
   window.addEventListener('resize', render);
 
   function render(){
     const cssW = canvas.clientWidth || canvas.parentElement.clientWidth;
-    const cssH = parseInt(canvas.getAttribute('height'),10);
+    const cssH = baseH;
     const dpr = window.devicePixelRatio||1;
     canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cssW,cssH);
