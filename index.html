@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rent vs. Buy — Net Worth Projection</title>
+<title>Rent vs. Buy: Net Worth Projection</title>
 <style>
   :root{
     --bg:#0f1419; --panel:#1a212b; --panel2:#222c38; --line:#2c3947;
@@ -137,8 +137,8 @@
 </head>
 <body>
 <header>
-  <h1>🏠 Rent vs. Buy — Net Worth Projection</h1>
-  <p>Compare buying a home against renting and investing the difference in the market. Adjust the assumptions on the left and watch projected net worth evolve. Everything stays in one file — save it, tweak it, and send it to a friend.</p>
+  <h1>🏠 Rent vs. Buy: Net Worth Projection</h1>
+  <p>Compare buying a home against renting and investing the difference in the market. Adjust the assumptions on the left and watch projected net worth evolve. Everything stays in one file, so you can save it, tweak it, and send it to a friend.</p>
 </header>
 
 <div class="layout">
@@ -151,7 +151,6 @@
 
     <div class="chartwrap">
       <h3>Projected net worth over time</h3>
-      <p class="csub">Total net worth in each scenario, including investments and (for buying) home equity.</p>
       <div class="legend">
         <div class="item"><span class="swatch" style="background:var(--buy)"></span>Buy a home</div>
         <div class="item"><span class="swatch" style="background:var(--rent)"></span>Rent &amp; invest the difference</div>
@@ -162,7 +161,6 @@
 
     <div class="chartwrap">
       <h3>What makes up your net worth</h3>
-      <p class="csub">Composition of net worth over time — home equity vs. investments. Both panels share the same scale, so the stack heights (total net worth) are directly comparable.</p>
       <div class="legend">
         <div class="item"><span class="swatch" style="background:var(--equity)"></span>Home equity</div>
         <div class="item"><span class="swatch" style="background:var(--buy)"></span>Investments</div>
@@ -185,7 +183,6 @@
 
     <div class="chartwrap">
       <h3>Monthly spending money</h3>
-      <p class="csub">What's left of your monthly salary after your investment contribution and all housing payments — the discretionary money you can actually spend. While renting/saving the two lines overlap; after buying they split. A dip below zero means the plan costs more than your monthly take-home. <em>(The net-worth charts above assume the rent-vs-buy difference is invested rather than spent.)</em></p>
       <div class="legend">
         <div class="item"><span class="swatch" style="background:var(--buy)"></span>If you buy</div>
         <div class="item"><span class="swatch" style="background:var(--rent)"></span>If you rent</div>
@@ -203,11 +200,11 @@
       <summary>How this works &amp; assumptions</summary>
       <ul>
         <li><b>Fair comparison:</b> both scenarios deploy the <i>same total cash</i> each month. The down payment + closing costs that the buyer spends are instead kept invested by the renter. Whichever scenario has the lower monthly housing cost invests the difference.</li>
-        <li><b>Income &amp; investing:</b> a fixed % of (growing) income is invested every month in <i>both</i> scenarios, so the chart reflects total net worth including ordinary savings — not just the housing decision.</li>
+        <li><b>Income &amp; investing:</b> a fixed % of (growing) income is invested every month in <i>both</i> scenarios, so the chart reflects total net worth including ordinary savings, not just the housing decision.</li>
         <li><b>Buying costs:</b> mortgage principal &amp; interest, property tax, home insurance, HOA, and maintenance. Principal payments build equity (tracked separately). Home value grows at the appreciation rate.</li>
         <li><b>Equity:</b> home value − remaining loan balance. With "subtract selling costs" on, net worth reflects what you'd actually walk away with if you sold (realtor fees, etc.).</li>
         <li><b>Renting costs:</b> rent (grows yearly) + renter's insurance.</li>
-        <li><b>Wait before buying:</b> during the wait the buyer rents the same place and keeps saving/investing, while the home keeps appreciating — so waiting longer means a higher purchase price and a larger down payment. The <i>Auto-set</i> button finds the earliest month your savings cover that (rising) down payment + closing costs.</li>
+        <li><b>Wait before buying:</b> during the wait the buyer rents the same place and keeps saving/investing, while the home keeps appreciating, so waiting longer means a higher purchase price and a larger down payment. The <i>Auto-set</i> button finds the earliest month your savings cover that (rising) down payment + closing costs.</li>
         <li><b>Returns:</b> investment and appreciation rates compound monthly; rent and income step up once per year.</li>
         <li><b>Not modeled:</b> income taxes, mortgage-interest / property-tax deductions, capital-gains tax, PMI for low down payments, and rent control. Returns are nominal &amp; pre-tax unless you adjust for inflation. Treat this as a planning estimate, not financial advice.</li>
       </ul>
@@ -460,7 +457,7 @@ function autoSetWait(){
   recompute();
   if(msg){ msg.className='btnmsg pos';
     msg.textContent = m===0
-      ? 'You can already cover the down payment today — no need to wait.'
+      ? 'You can already cover the down payment today, no need to wait.'
       : 'Set to '+m+' months ('+(m/12).toFixed(1)+' yr): the earliest point your savings cover the down payment + closing costs at that future price.';
   }
 }
@@ -876,7 +873,7 @@ function copyShareLink(){
   const url=makeShareURL();
   function done(ok){
     try{ history.replaceState(null,'',url); }catch(e){}
-    settingsMsg(ok ? 'Shareable link copied to clipboard.' : 'Link added to the address bar above — copy it from there.', ok?'pos':'');
+    settingsMsg(ok ? 'Shareable link copied to clipboard.' : 'Link added to the address bar above; copy it from there.', ok?'pos':'');
   }
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(url).then(()=>done(true)).catch(()=>fallbackCopy(url,done));
@@ -909,8 +906,8 @@ function recompute(){
   else crossTxt = (sim.finalSign>=0?'Buying leads the whole time':'Renting leads the whole time');
 
   const cards=[
-    {k:'Net worth — Buy', dot:'var(--buy)', val:fmtUSD(last.buyNW), sub:'after '+sim.years+' years', hl:diff>=0},
-    {k:'Net worth — Rent & invest', dot:'var(--rent)', val:fmtUSD(last.rentNW), sub:'after '+sim.years+' years', hl:diff<0},
+    {k:'Net worth: Buy', dot:'var(--buy)', val:fmtUSD(last.buyNW), sub:'after '+sim.years+' years', hl:diff>=0},
+    {k:'Net worth: Rent & invest', dot:'var(--rent)', val:fmtUSD(last.rentNW), sub:'after '+sim.years+' years', hl:diff<0},
     {k:(diff>=0?'Buying ahead by':'Renting ahead by'), val:fmtUSD(Math.abs(diff)),
        sub:crossTxt, cls:diff>=0?'pos':'neg'},
     {k:'Monthly mortgage (P&I)', val: sim.bought? fmtUSD(sim.mortgagePmt) : 'Not bought',
@@ -926,7 +923,7 @@ function recompute(){
     '</div>'
   )).join('');
 
-  // charts — vertical marker at the purchase month (only when there's an actual wait)
+  // charts: vertical marker at the purchase month (only when there's an actual wait)
   const pYear = (sim.bought && sim.waitM>0) ? sim.waitM/12 : null;
   const pLabel = pYear!=null ? ('Buy · yr '+(sim.waitM%12===0 ? (sim.waitM/12) : (sim.waitM/12).toFixed(1))) : null;
   chartMain.setMarker(pYear, pLabel);
